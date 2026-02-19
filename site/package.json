@@ -7,7 +7,7 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@cristicretu/penflow": "workspace:*",
+    "penflow": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

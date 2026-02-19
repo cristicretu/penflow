@@ -35,7 +35,7 @@ importers:
 
   site:
     dependencies:
-      '@cristicretu/penflow':
+      penflow:
         specifier: workspace:*
         version: link:../packages/penflow
       react:

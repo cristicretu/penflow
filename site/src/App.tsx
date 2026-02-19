@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Penflow } from '@cristicretu/penflow/react';
+import { Penflow } from 'penflow/react';
 
 const fonts = [
   { name: 'Brittany Signature', url: '/fonts/BrittanySignature.ttf' },
@@ -14,13 +14,13 @@ const installTabs = ['npm', 'pnpm', 'yarn', 'bun'] as const;
 type InstallTab = (typeof installTabs)[number];
 
 const installCommands: Record<InstallTab, string> = {
-  npm: 'npm i @cristicretu/penflow',
-  pnpm: 'pnpm add @cristicretu/penflow',
-  yarn: 'yarn add @cristicretu/penflow',
-  bun: 'bun add @cristicretu/penflow'
+  npm: 'npm i penflow',
+  pnpm: 'pnpm add penflow',
+  yarn: 'yarn add penflow',
+  bun: 'bun add penflow'
 };
 
-const reactUsageCode = `import { Penflow } from '@cristicretu/penflow/react';\n\n<Penflow text="hello world" fontUrl="/fonts/BrittanySignature.ttf" />`;
+const reactUsageCode = `import { Penflow } from 'penflow/react';\n\n<Penflow text="hello world" fontUrl="/fonts/BrittanySignature.ttf" />`;
 
 const wrapLine = (line: string, maxChars = 28): string[] => {
   const words = line.trim().split(/\s+/).filter(Boolean);

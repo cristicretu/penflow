@@ -6,6 +6,6 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter site dev",
-    "test": "pnpm --filter @cristicretu/penflow test"
+    "test": "pnpm --filter penflow test"
   }
 }

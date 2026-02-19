@@ -1,6 +1,6 @@
 # penflow
 
-Monorepo for `@cristicretu/penflow` and its demo site.
+Monorepo for `penflow` and its demo site.
 
 - Package: `packages/penflow`
 - Site: `site`

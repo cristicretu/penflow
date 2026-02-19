@@ -1,17 +1,17 @@
-# @cristicretu/penflow
+# penflow
 
 Animated handwriting renderer using Typr.js glyph contours.
 
 ## Install
 
 ```bash
-pnpm add @cristicretu/penflow
+pnpm add penflow
 ```
 
 ## React Usage
 
 ```tsx
-import { Penflow } from '@cristicretu/penflow/react';
+import { Penflow } from 'penflow/react';
 
 <Penflow
   text="hello world"
