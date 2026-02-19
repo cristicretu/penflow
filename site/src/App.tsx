@@ -3,11 +3,6 @@ import { Penflow } from 'penflow/react';
 
 const fonts = [
   { name: 'Brittany Signature', url: '/fonts/BrittanySignature.ttf' },
-  { name: 'Helvetica', url: '/fonts/Helvetica.ttc' },
-  { name: 'Menlo', url: '/fonts/Menlo.ttc' },
-  { name: 'Monaco', url: '/fonts/Monaco.ttf' },
-  { name: 'New York', url: '/fonts/NewYork.ttf' },
-  { name: 'SF Pro Rounded', url: '/fonts/SFNSRounded.ttf' }
 ] as const;
 
 const installTabs = ['npm', 'pnpm', 'yarn', 'bun'] as const;
@@ -181,6 +176,15 @@ export default function App() {
           Crafted by{' '}
           <a href="https://twitter.com/cristicrtu" target="_blank" rel="noreferrer">
             Cristian Cretu
+          </a>
+        </p>
+        <p className="footerLinks">
+          <a href="https://www.npmjs.com/package/penflow" target="_blank" rel="noreferrer">
+            npm
+          </a>
+          <span> • </span>
+          <a href="https://github.com/cristicretu/penflow" target="_blank" rel="noreferrer">
+            GitHub
           </a>
         </p>
       </footer>
