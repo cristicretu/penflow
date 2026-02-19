@@ -1,0 +1,11 @@
+{
+  "name": "penflow-repo",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.18.1",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter site dev",
+    "test": "pnpm --filter @cristicretu/penflow test"
+  }
+}
