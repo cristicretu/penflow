@@ -98,3 +98,19 @@ textarea { resize: vertical; min-height: 88px; line-height: 1.45; }
   .bar { grid-template-columns: 1fr; }
   .reset { width: 100%; }
 }
+
+textarea:focus,
+select:focus,
+button:focus {
+  outline: none;
+}
+
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+.tabBtn:focus-visible,
+.copyBtn:focus-visible {
+  outline: 2px solid #3a3a3a;
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}

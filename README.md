@@ -11,3 +11,7 @@ Monorepo for `penflow` and its demo site.
 pnpm install
 pnpm dev
 ```
+
+## License
+
+MIT

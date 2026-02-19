@@ -20,3 +20,7 @@ import { Penflow } from 'penflow/react';
   seed="demo"
 />
 ```
+
+## License
+
+MIT

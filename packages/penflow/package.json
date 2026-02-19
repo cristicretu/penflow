@@ -1,6 +1,7 @@
 {
   "name": "penflow",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
