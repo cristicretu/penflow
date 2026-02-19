@@ -312,7 +312,13 @@ const buildModel = ({
   const scale = fontSize / unitsPerEm;
   const lineHeightPx = size * lineHeight;
   const paddingX = size * 0.24;
-  const paddingTop = size * 0.28;
+  const rawAscender = fontData?.hhea?.ascender ?? unitsPerEm * 0.82;
+  const rawDescender = Math.abs(fontData?.hhea?.descender ?? unitsPerEm * 0.28);
+  const ascenderPx = rawAscender * scale * 1.08;
+  const descenderPx = rawDescender * scale * 1.2;
+  const lineStridePx = Math.max(lineHeightPx, ascenderPx + descenderPx + size * 0.16);
+  const paddingTop = size * 0.34;
+  const paddingBottom = size * 0.78;
 
   const chars: CharStroke[] = [];
   let timeline = 0;
@@ -321,7 +327,7 @@ const buildModel = ({
   lines.forEach((line, lineIndex) => {
     const graphemes = segmentGraphemes(line);
     let cursorX = paddingX;
-    const baselineY = paddingTop + lineHeightPx * lineIndex + fontSize;
+    const baselineY = paddingTop + ascenderPx + lineStridePx * lineIndex;
 
     for (let index = 0; index < graphemes.length; index += 1) {
       const char = graphemes[index];
@@ -371,7 +377,7 @@ const buildModel = ({
 
   return {
     width: Math.max(maxWidth, size * 3),
-    height: Math.max(lineHeightPx * lines.length + paddingTop * 1.35, size * 1.7),
+    height: Math.max(paddingTop + ascenderPx + descenderPx + lineStridePx * Math.max(0, lines.length - 1) + paddingBottom, size * 1.9),
     chars,
     totalDuration: chars.reduce((max, item) => Math.max(max, item.delay + item.duration), 0)
   };
@@ -435,8 +441,6 @@ export function Penflow({
     const dpr = Math.max(1, window.devicePixelRatio || 1);
     canvas.width = Math.ceil(model.width * dpr);
     canvas.height = Math.ceil(model.height * dpr);
-    canvas.style.width = `${model.width}px`;
-    canvas.style.height = `${model.height}px`;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.lineJoin = 'round';
@@ -509,7 +513,7 @@ export function Penflow({
       className={className}
       role="img"
       aria-label={text}
-      style={{ width: '100%', maxWidth: `${model?.width ?? size * 3}px`, height: 'auto', display: 'block' }}
+      style={{ width: `${model?.width ?? size * 3}px`, maxWidth: '100%', height: 'auto', display: 'block' }}
     />
   );
 }
