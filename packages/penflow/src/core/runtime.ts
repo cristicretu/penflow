@@ -49,3 +49,44 @@ export const hashSeed = (value: string | number): number => {
   }
   return hash >>> 0;
 };
+
+/**
+ * How a character the font has no glyph for (usually an emoji) shows up while
+ * the text writes itself. It can't be traced like a letter, so it's drawn with
+ * a system font instead and arrives in its turn:
+ * - `fade`: fades in
+ * - `pop`: scales up with a small overshoot while fading in
+ * - `wipe`: revealed left to right, like the pen passing over it
+ * - `instant`: appears at once
+ * - `none`: isn't drawn (the old behaviour)
+ */
+export type FallbackAnimation = 'fade' | 'pop' | 'wipe' | 'instant' | 'none';
+
+export const FALLBACK_ANIMATIONS: readonly FallbackAnimation[] = ['fade', 'pop', 'wipe', 'instant', 'none'];
+
+export const DEFAULT_FALLBACK_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif';
+
+/** true when the font has nothing to trace for this grapheme (only .notdef or no glyphs at all) */
+export const isMissingGlyph = (char: string, gids: number[]): boolean => {
+  if (!char || /^\s+$/u.test(char)) return false;
+  return gids.every((gid) => gid <= 0);
+};
+
+const easeOut = (t: number): number => 1 - (1 - t) ** 3;
+const backOut = (t: number): number => {
+  const c = 1.9;
+  return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
+};
+
+/** what a fallback glyph looks like `progress` (0..1) of the way through its turn */
+export const fallbackFrame = (
+  animation: FallbackAnimation,
+  progress: number
+): { alpha: number; scale: number; reveal: number } => {
+  const p = clamp(progress, 0, 1);
+  if (animation === 'none' || p <= 0) return { alpha: 0, scale: 1, reveal: 0 };
+  if (animation === 'fade') return { alpha: easeOut(p), scale: 1, reveal: 1 };
+  if (animation === 'pop') return { alpha: clamp(p * 2.5, 0, 1), scale: 0.35 + 0.65 * backOut(p), reveal: 1 };
+  if (animation === 'wipe') return { alpha: 1, scale: 1, reveal: easeOut(p) };
+  return { alpha: 1, scale: 1, reveal: 1 };
+};
