@@ -1,13 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Typr from 'typr.js';
 import {
+  DEFAULT_FALLBACK_FONT,
   clamp,
   computeCatchupMultiplier,
+  fallbackFrame,
   getQualityPreset,
   hashSeed,
+  isMissingGlyph,
   isTypingBurst,
   seededRandom,
   segmentGraphemes,
+  type FallbackAnimation,
   type Quality
 } from '../core/runtime';
 
@@ -33,9 +37,14 @@ export type PenflowProps = {
   incremental?: boolean;
   autoReplay?: boolean;
   playheadKey?: number;
+  /** how characters missing from the font (emoji, mostly) appear. default `fade` */
+  fallback?: FallbackAnimation;
+  /** CSS font-family those characters are drawn with */
+  fallbackFont?: string;
 };
 
 type CharStroke = {
+  kind: 'stroke';
   fillPath: Path2D;
   drawSegments: number[][][];
   pathLength: number;
@@ -43,6 +52,33 @@ type CharStroke = {
   seed: number;
   delay: number;
   duration: number;
+};
+
+/** a character the font can't trace, drawn as text with the fallback font */
+type CharText = {
+  kind: 'text';
+  text: string;
+  font: string;
+  x: number;
+  baselineY: number;
+  width: number;
+  ascent: number;
+  descent: number;
+  delay: number;
+  duration: number;
+};
+
+type CharItem = CharStroke | CharText;
+
+type Measure = (text: string, font: string) => { width: number; ascent: number; descent: number };
+
+let measureCtx: CanvasRenderingContext2D | null = null;
+const measureText: Measure = (text, font) => {
+  measureCtx ??= document.createElement('canvas').getContext('2d');
+  if (!measureCtx) return { width: 0, ascent: 0, descent: 0 };
+  measureCtx.font = font;
+  const m = measureCtx.measureText(text);
+  return { width: m.width, ascent: m.actualBoundingBoxAscent, descent: m.actualBoundingBoxDescent };
 };
 
 type FontEntry = { fontData: any; defaults: Required<PenflowProfile> };
@@ -126,6 +162,29 @@ const drawSegmentsProgress = (ctx: CanvasRenderingContext2D, segments: number[][
     }
   }
   ctx.stroke();
+};
+
+const drawTextProgress = (ctx: CanvasRenderingContext2D, item: CharText, animation: FallbackAnimation, progress: number): void => {
+  const { alpha, scale, reveal } = fallbackFrame(animation, progress);
+  if (alpha <= 0 || reveal <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.font = item.font;
+  ctx.textBaseline = 'alphabetic';
+  if (reveal < 1) {
+    ctx.beginPath();
+    ctx.rect(item.x - 1, item.baselineY - item.ascent - 2, (item.width + 2) * reveal, item.ascent + item.descent + 4);
+    ctx.clip();
+  }
+  if (scale !== 1) {
+    const cx = item.x + item.width / 2;
+    const cy = item.baselineY - (item.ascent - item.descent) / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.translate(-cx, -cy);
+  }
+  ctx.fillText(item.text, item.x, item.baselineY);
+  ctx.restore();
 };
 
 const deriveFontDefaults = (fontData: any, fontUrl: string): Required<PenflowProfile> => {
@@ -293,7 +352,10 @@ const buildModel = ({
   lineHeight,
   profile,
   quality,
-  seed
+  seed,
+  fallback,
+  fallbackFont,
+  measure
 }: {
   fontData: any;
   text: string;
@@ -303,6 +365,9 @@ const buildModel = ({
   profile: Required<PenflowProfile>;
   quality: Quality;
   seed: string | number;
+  fallback: FallbackAnimation;
+  fallbackFont: string;
+  measure: Measure;
 }) => {
   const baseSeed = typeof seed === 'number' ? seed : hashSeed(seed);
   const preset = getQualityPreset(quality);
@@ -320,7 +385,8 @@ const buildModel = ({
   const paddingTop = size * 0.34;
   const paddingBottom = size * 0.78;
 
-  const chars: CharStroke[] = [];
+  const chars: CharItem[] = [];
+  const textFont = `${fontSize}px ${fallbackFont}`;
   let timeline = 0;
   let maxWidth = paddingX * 2 + size * 2;
 
@@ -339,7 +405,33 @@ const buildModel = ({
       const nextGid = nextGids[0] ?? 0;
       const kern = Typr.U.getPairAdjustment(fontData, gid, nextGid) || 0;
       const advanceUnits = (fontData?.hmtx?.aWidth?.[gid] ?? unitsPerEm * 0.45) + kern;
-      const advance = advanceUnits * scale;
+      let advance = advanceUnits * scale;
+
+      if (fallback !== 'none' && isMissingGlyph(char, gids)) {
+        const m = measure(char, textFont);
+        const rhythm = 0.86 + seededRandom(charSeed + 11) * preset.cadenceJitter;
+        const duration = clamp((280 * rhythm * profile.durationScale) / speed, 140, 560);
+        const gap = clamp((24 + seededRandom(charSeed + 47) * 18) / speed, 14, 98);
+        const lift = clamp((10 + seededRandom(charSeed + 29) * 10) / speed, 6, 30);
+        if (m.width > 0) {
+          chars.push({
+            kind: 'text',
+            text: char,
+            font: textFont,
+            x: cursorX,
+            baselineY,
+            width: m.width,
+            ascent: m.ascent || fontSize,
+            descent: m.descent || fontSize * 0.25,
+            delay: Number(timeline.toFixed(0)),
+            duration: Number(duration.toFixed(0))
+          });
+          advance = m.width + fontSize * 0.06;
+        }
+        timeline += duration + lift + gap;
+        cursorX += advance;
+        continue;
+      }
 
       const isSpace = char === ' ';
       const isPunct = /[.,!?;:]/.test(char);
@@ -357,6 +449,7 @@ const buildModel = ({
 
       if (!isSpace && fillPath && drawSegments.length > 0) {
         chars.push({
+          kind: 'stroke',
           fillPath,
           drawSegments,
           pathLength,
@@ -398,7 +491,9 @@ export function Penflow({
   animate = true,
   incremental = true,
   autoReplay = false,
-  playheadKey = 0
+  playheadKey = 0,
+  fallback = 'fade',
+  fallbackFont = DEFAULT_FALLBACK_FONT
 }: PenflowProps): React.ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef({ text: '', penTime: 0, lastUpdate: 0, playheadKey: 0 });
@@ -429,8 +524,20 @@ export function Penflow({
       ...(profile ?? {}),
       ...(brushScale == null ? {} : { brushScale })
     };
-    return buildModel({ fontData: fontEntry.fontData, text, size, speed, lineHeight, profile: merged, quality, seed });
-  }, [brushScale, fontEntry, lineHeight, profile, quality, seed, size, speed, text]);
+    return buildModel({
+      fontData: fontEntry.fontData,
+      text,
+      size,
+      speed,
+      lineHeight,
+      profile: merged,
+      quality,
+      seed,
+      fallback,
+      fallbackFont,
+      measure: measureText
+    });
+  }, [brushScale, fallback, fallbackFont, fontEntry, lineHeight, profile, quality, seed, size, speed, text]);
 
   useEffect(() => {
     if (!canvasRef.current || !model) return;
@@ -477,6 +584,10 @@ export function Penflow({
       for (const item of model.chars) {
         const progress = clamp((penTime - item.delay) / item.duration, 0, 1);
         if (progress <= 0) continue;
+        if (item.kind === 'text') {
+          drawTextProgress(ctx, item, fallback, progress);
+          continue;
+        }
         ctx.save();
         ctx.clip(item.fillPath);
         ctx.lineWidth = item.brushWidth;
@@ -492,6 +603,10 @@ export function Penflow({
     if (!animate) {
       ctx.clearRect(0, 0, model.width, model.height);
       for (const item of model.chars) {
+        if (item.kind === 'text') {
+          drawTextProgress(ctx, item, 'instant', 1);
+          continue;
+        }
         ctx.save();
         ctx.clip(item.fillPath);
         ctx.lineWidth = item.brushWidth;
@@ -505,7 +620,7 @@ export function Penflow({
     streamRef.current = { text, penTime, lastUpdate: now, playheadKey };
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
-  }, [animate, autoReplay, color, incremental, model, playheadKey, quality, text]);
+  }, [animate, autoReplay, color, fallback, incremental, model, playheadKey, quality, text]);
 
   return (
     <canvas

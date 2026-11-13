@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Penflow } from 'penflow/react';
+import { Penflow, type FallbackAnimation } from 'penflow/react';
 
 const fonts = [
   { name: 'Brittany Signature', url: '/fonts/BrittanySignature.ttf' },
@@ -47,6 +47,7 @@ export default function App() {
   const [text, setText] = useState(`handwriting matters.\nanimation should feel authored.`);
   const [fontUrl, setFontUrl] = useState(fonts[0].url);
   const [quality, setQuality] = useState<'calm' | 'balanced' | 'snappy'>('balanced');
+  const [fallback, setFallback] = useState<FallbackAnimation>('fade');
   const [playheadKey, setPlayheadKey] = useState(0);
   const [demoReady, setDemoReady] = useState(false);
   const [installTab, setInstallTab] = useState<InstallTab>('npm');
@@ -108,6 +109,7 @@ export default function App() {
           text={demoReady ? wrappedText : ''}
           fontUrl={fontUrl}
           quality={quality}
+          fallback={fallback}
           brushScale={0.072}
           speed={1}
           playheadKey={playheadKey}
@@ -130,6 +132,13 @@ export default function App() {
             <option value="calm">calm</option>
             <option value="balanced">balanced</option>
             <option value="snappy">snappy</option>
+          </select>
+          <select value={fallback} onChange={(e) => setFallback(e.target.value as FallbackAnimation)} aria-label="Emoji animation">
+            <option value="fade">emoji: fade</option>
+            <option value="pop">emoji: pop</option>
+            <option value="wipe">emoji: wipe</option>
+            <option value="instant">emoji: instant</option>
+            <option value="none">emoji: none</option>
           </select>
           <button className="reset" onClick={onReplay}>
             Replay
