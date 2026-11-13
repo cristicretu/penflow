@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Penflow, type FallbackAnimation } from 'penflow/react';
+import { Penflow } from 'penflow/react';
 
 const fonts = [
   { name: 'Brittany Signature', url: '/fonts/BrittanySignature.ttf' },
+  { name: 'Arizonia', url: '/fonts/arizonia/Arizonia-Regular.ttf' },
+  { name: 'Mr De Haviland', url: '/fonts/mrdehaviland/MrDeHaviland-Regular.ttf' },
+  { name: 'Monsieur La Doulaise', url: '/fonts/monsieurladoulaise/MonsieurLaDoulaise-Regular.ttf' },
+  { name: 'Mrs Saint Delafield', url: '/fonts/mrssaintdelafield/MrsSaintDelafield-Regular.ttf' },
 ] as const;
+
+const qualities = ['calm', 'balanced', 'snappy'] as const;
+type Quality = (typeof qualities)[number];
 
 const installTabs = ['npm', 'pnpm', 'yarn', 'bun'] as const;
 type InstallTab = (typeof installTabs)[number];
@@ -14,8 +21,6 @@ const installCommands: Record<InstallTab, string> = {
   yarn: 'yarn add penflow',
   bun: 'bun add penflow'
 };
-
-const reactUsageCode = `import { Penflow } from 'penflow/react';\n\n<Penflow text="hello world" fontUrl="/fonts/BrittanySignature.ttf" />`;
 
 const wrapLine = (line: string, maxChars = 28): string[] => {
   const words = line.trim().split(/\s+/).filter(Boolean);
@@ -45,14 +50,21 @@ const wrapForDemo = (input: string, maxChars = 28): string =>
 
 export default function App() {
   const [text, setText] = useState(`handwriting matters.\nanimation should feel authored.`);
-  const [fontUrl, setFontUrl] = useState(fonts[0].url);
-  const [quality, setQuality] = useState<'calm' | 'balanced' | 'snappy'>('balanced');
-  const [fallback, setFallback] = useState<FallbackAnimation>('fade');
+  const [fontUrl, setFontUrl] = useState<string>(fonts[0].url);
+  const [quality, setQuality] = useState<Quality>('balanced');
   const [playheadKey, setPlayheadKey] = useState(0);
   const [demoReady, setDemoReady] = useState(false);
   const [installTab, setInstallTab] = useState<InstallTab>('npm');
   const [installCopied, setInstallCopied] = useState(false);
   const [usageCopied, setUsageCopied] = useState(false);
+
+  const reactUsageCode = `import { Penflow } from 'penflow/react';
+
+<Penflow
+  text="hello world"
+  fontUrl="${fontUrl}"
+  quality="${quality}"
+/>`;
 
   const wrappedText = useMemo(() => wrapForDemo(text, 28), [text]);
 
@@ -90,9 +102,8 @@ export default function App() {
         <div className="wordmark">
           <Penflow
             text="penflow"
-            fontUrl="/fonts/BrittanySignature.ttf"
+            fontUrl={fonts[0].url}
             size={68}
-            speed={1.2}
             quality="balanced"
             brushScale={0.072}
             seed="wordmark"
@@ -106,12 +117,11 @@ export default function App() {
 
       <section className="demo">
         <Penflow
+          key={fontUrl}
           text={demoReady ? wrappedText : ''}
           fontUrl={fontUrl}
-          quality={quality}
-          fallback={fallback}
           brushScale={0.072}
-          speed={1}
+          quality={quality}
           playheadKey={playheadKey}
           seed="site-seed"
           color="#ffffff"
@@ -121,24 +131,23 @@ export default function App() {
       <section className="controls">
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} />
         <div className="bar">
-          <select value={fontUrl} onChange={(e) => setFontUrl(e.target.value)}>
+          <select aria-label="Font" value={fontUrl} onChange={(e) => {
+            setFontUrl(e.target.value);
+            onReplay();
+          }}>
             {fonts.map((font) => (
               <option key={font.url} value={font.url}>
                 {font.name}
               </option>
             ))}
           </select>
-          <select value={quality} onChange={(e) => setQuality(e.target.value as 'calm' | 'balanced' | 'snappy')}>
-            <option value="calm">calm</option>
-            <option value="balanced">balanced</option>
-            <option value="snappy">snappy</option>
-          </select>
-          <select value={fallback} onChange={(e) => setFallback(e.target.value as FallbackAnimation)} aria-label="Emoji animation">
-            <option value="fade">emoji: fade</option>
-            <option value="pop">emoji: pop</option>
-            <option value="wipe">emoji: wipe</option>
-            <option value="instant">emoji: instant</option>
-            <option value="none">emoji: none</option>
+          <select aria-label="Animation quality" value={quality} onChange={(e) => {
+            setQuality(e.target.value as Quality);
+            onReplay();
+          }}>
+            {qualities.map((value) => (
+              <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)}</option>
+            ))}
           </select>
           <button className="reset" onClick={onReplay}>
             Replay
